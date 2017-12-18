@@ -20,7 +20,7 @@ object BSONDerivation {
       case doc: BSONDocument =>
         caseClass.construct { p =>
           doc.getUnflattenedTry(p.label) match {
-            case Success(Some(v)) => p.typeclass.read(v.asInstanceOf)
+            case Success(Some(v)) => p.typeclass.asInstanceOf[BSONHandler[BSONValue, T]].read(v)
             case Success(None) => p.default.get // TODO better ex
             case Failure(ex) => throw ex
           }
@@ -44,7 +44,7 @@ object BSONDerivation {
       case doc: BSONDocument =>
         val className = doc.getAs[String]("className").getOrElse(throw new IllegalStateException("'className' is required for sealed traits"))
         val subtype = sealedTrait.subtypes.find(_.label == className).get
-        subtype.typeclass.read(doc.asInstanceOf)
+        subtype.typeclass.asInstanceOf[BSONHandler[BSONValue, T]].read(doc)
       case _ => throw new IllegalStateException("we only handle-case classes")
     }
 

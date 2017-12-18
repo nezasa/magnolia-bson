@@ -1,5 +1,5 @@
 import BSONDerivation.Typeclass
-import reactivemongo.bson.{BSONArray, BSONHandler, BSONValue}
+import reactivemongo.bson.{BSONArray, BSONDocument, BSONHandler, BSONReader, BSONValue}
 import reactivemongo.bson.DefaultBSONHandlers._
 
 object BSONDerivationTest {
@@ -31,9 +31,11 @@ object BSONDerivationTest {
   def main(args: Array[String]): Unit = {
     implicit val transportWriter: Typeclass[Transport] = BSONDerivation.gen[Transport]
     implicit val cityWriter: Typeclass[City] = BSONDerivation.gen[City]
+
     val cs = BSONDerivation.gen[Trip].write(trip)
-    val t = BSONDerivation.gen[Trip].read(cs)
-    println(t)
+    val t = BSONDerivation.gen[Trip].asInstanceOf[BSONHandler[BSONValue, Trip]].read(cs)
+
+    println(t == trip)
   }
 
 }
