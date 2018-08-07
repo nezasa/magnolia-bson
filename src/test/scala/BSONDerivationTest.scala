@@ -1,16 +1,9 @@
-import BSONDerivation.Typeclass
-import reactivemongo.bson.{BSONArray, BSONDocument, BSONHandler, BSONReader, BSONValue}
-import reactivemongo.bson.DefaultBSONHandlers._
+package magnolia.bson
 
-object BSONDerivationTest {
+import magnolia.debug
+import reactivemongo.bson._
 
-  implicit def SeqHandler[T](implicit handler: BSONHandler[_ <: BSONValue, T]): BSONHandler[BSONArray , Seq[T]] =
-    BSONHandler(
-      v => new BSONArrayCollectionReader[Seq, T]().read(v),
-      ts => BSONArray(ts.map(handler.write))
-    )
-
-
+object examples {
   case class Coordinates(lat: Double, long: Double)
   case class City(name: String, location: Coordinates)
 
@@ -19,23 +12,42 @@ object BSONDerivationTest {
   case object Taxi extends Transport
 
   case class Trip(cities: Seq[City], transports: Seq[Transport])
+  object Trip {
+    import magnolia.bson.derivation.reader.semiauto._
+    import magnolia.bson.derivation.writer.semiauto._
 
-  private val cityA = City("Frauenfeld", Coordinates(1, 2))
-  private val cityB = City("Lisbon", Coordinates(3, 4))
-  private val trip =
+    implicit val transportReader = deriveMagnoliaReader[Transport]
+    implicit val transportWriter = deriveMagnoliaWriter[Transport]
+    implicit val coordinatesReader = deriveMagnoliaReader[Coordinates]
+    implicit val coordinatesWriter = deriveMagnoliaWriter[Coordinates]
+    implicit val cityReader = deriveMagnoliaReader[City]
+    implicit val cityWriter = deriveMagnoliaWriter[City]
+
+    implicit val tripReader: BSONReader[BSONValue, Trip] = deriveMagnoliaReader[Trip].asInstanceOf[BSONReader[BSONValue, Trip]]
+    implicit val tripWriter: BSONWriter[Trip, BSONValue] = deriveMagnoliaWriter[Trip].asInstanceOf[BSONWriter[Trip,BSONValue]]
+  }
+}
+
+object BSONDerivationTest {
+
+  def main(args: Array[String]): Unit = {
+    import examples._
+
+    val cityA = City("Frauenfeld", Coordinates(1, 2))
+    val cityB = City("Lisbon", Coordinates(3, 4))
+    val trip =
     Trip(
       cities = Seq(cityA, cityB),
       transports = Seq(Flight("Swiss"), Taxi, Flight("Lufthansa"))
     )
 
-  def main(args: Array[String]): Unit = {
-    implicit val transportWriter: Typeclass[Transport] = BSONDerivation.gen[Transport]
-    implicit val cityWriter: Typeclass[City] = BSONDerivation.gen[City]
 
-    val cs = BSONDerivation.gen[Trip].write(trip)
-    val t = BSONDerivation.gen[Trip].asInstanceOf[BSONHandler[BSONValue, Trip]].read(cs)
+    val cs = Trip.tripWriter.write(trip)
+    val t = Trip.tripReader.read(cs)
 
     println(t == trip)
   }
 
 }
+
+
