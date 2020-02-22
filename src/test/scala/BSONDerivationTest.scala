@@ -23,8 +23,8 @@ object examples {
     implicit val cityReader = deriveMagnoliaReader[City]
     implicit val cityWriter = deriveMagnoliaWriter[City]
 
-    implicit val tripReader: BSONReader[BSONValue, Trip] = deriveMagnoliaReader[Trip].asInstanceOf[BSONReader[BSONValue, Trip]]
-    implicit val tripWriter: BSONWriter[Trip, BSONValue] = deriveMagnoliaWriter[Trip].asInstanceOf[BSONWriter[Trip,BSONValue]]
+    implicit val tripReader: BSONDocumentReader[Trip] = deriveMagnoliaReader[Trip]
+    implicit val tripWriter: BSONDocumentWriter[Trip] = deriveMagnoliaWriter[Trip]
   }
 }
 
