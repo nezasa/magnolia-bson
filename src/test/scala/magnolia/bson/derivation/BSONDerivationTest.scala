@@ -1,23 +1,17 @@
-package magnolia.bson
+package magnolia.bson.derivation
 
-import magnolia.debug
-import reactivemongo.bson._
+import magnolia.bson.examples._
+import reactivemongo.bson.{BSONDocumentHandler, BSONDocumentReader, BSONDocumentWriter}
 
-object examples {
-  case class Coordinates(lat: Double, long: Double)
-  case class City(name: String, location: Coordinates)
+object BSONDerivationTest {
 
-  sealed trait Transport
-  case class Flight(airline: String) extends Transport
-  case object Taxi extends Transport
-
-  case class Trip(cities: Seq[City], transports: Seq[Transport])
-  object Trip {
+  def main(args: Array[String]): Unit = {
     import magnolia.bson.derivation.reader.semiauto._
     import magnolia.bson.derivation.writer.semiauto._
+    import magnolia.bson.derivation.handler.semiauto._
+    import reactivemongo.bson.DefaultBSONHandlers._
 
-    implicit val transportReader = deriveMagnoliaReader[Transport]
-    implicit val transportWriter = deriveMagnoliaWriter[Transport]
+    implicit val transportHandler: BSONDocumentHandler[Transport] = deriveMagnoliaHandler[Transport]
     implicit val coordinatesReader = deriveMagnoliaReader[Coordinates]
     implicit val coordinatesWriter = deriveMagnoliaWriter[Coordinates]
     implicit val cityReader = deriveMagnoliaReader[City]
@@ -25,13 +19,6 @@ object examples {
 
     implicit val tripReader: BSONDocumentReader[Trip] = deriveMagnoliaReader[Trip]
     implicit val tripWriter: BSONDocumentWriter[Trip] = deriveMagnoliaWriter[Trip]
-  }
-}
-
-object BSONDerivationTest {
-
-  def main(args: Array[String]): Unit = {
-    import examples._
 
     val cityA = City("Frauenfeld", Coordinates(1, 2))
     val cityB = City("Lisbon", Coordinates(3, 4))
@@ -42,12 +29,10 @@ object BSONDerivationTest {
     )
 
 
-    val cs = Trip.tripWriter.write(trip)
-    val t = Trip.tripReader.read(cs)
+    val cs = tripWriter.write(trip)
+    val t = tripReader.read(cs)
 
     println(t == trip)
   }
 
 }
-
-
