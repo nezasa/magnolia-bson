@@ -2,7 +2,7 @@ package magnolia.bson.derivation.handler
 
 import magnolia.bson.{BSONReadDerivation, BSONWriteDerivation}
 import magnolia.{CaseClass, Magnolia, SealedTrait}
-import reactivemongo.bson.{BSONDocumentHandler, BSONDocumentReader, BSONDocumentWriter, BSONHandler, BSONReader, BSONValue, BSONWriter}
+import reactivemongo.bson.{BSONDocumentHandler, BSONDocumentReader, BSONDocumentWriter, BSONHandler, BSONReader, BSONValue, BSONWriter, VariantBSONWriter, VariantBSONWriterWrapper}
 
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
@@ -35,6 +35,10 @@ object semiauto {
       c.universe.reify(magnoliaTree.splice.asInstanceOf[BSONDocumentHandler[A]])
     }
   }
+  
+  //workaround while https://github.com/ReactiveMongo/ReactiveMongo/pull/945 is not merged
+  implicit def findWriter2[T, B <: BSONValue](implicit writer: VariantBSONWriter[T, B]): BSONWriter[T, B] =
+    new VariantBSONWriterWrapper(writer)
 }
 
 //object semiauto extends semiauto
