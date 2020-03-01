@@ -2,8 +2,9 @@ package magnolia.bson
 
 import magnolia._
 import reactivemongo.bson._
+import reactivemongo.bson.exceptions.DocumentKeyNotFound
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object BSONReadDerivation {
 
@@ -12,10 +13,10 @@ object BSONReadDerivation {
   def combine[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] = {
     BSONDocumentReader(doc =>
       caseClass.construct { p =>
-        doc.getAsUnflattenedTry(p.label)(p.typeclass) match {
-          case Success(Some(v)) => v
-          case Success(None) => p.default.get // TODO better ex
-          case Failure(ex) => throw ex
+        doc.getAsTry(p.label)(p.typeclass) match {
+          case Success(v) => v
+          case Failure(ex) => 
+            if(ex.isInstanceOf[DocumentKeyNotFound] && p.typeclass.isInstanceOf[OptionReader[_, _]]) None else throw ex
         }
       }
     )
@@ -25,9 +26,15 @@ object BSONReadDerivation {
     BSONDocumentReader(doc => {
       val className = doc.getAs[String]("className").getOrElse(throw new IllegalStateException("'className' is required for sealed traits"))
       val subtype = sealedTrait.subtypes.find(_.typeName.full == className).get
-      subtype.typeclass.asInstanceOf[BSONReader[BSONValue, T]].read(doc)
+      subtype.typeclass.asInstanceOf[BSONDocumentReader[T]].read(doc)
     })
   }
+
+  //another workaround
+  class OptionReader[T, B <: BSONValue](private val reader: BSONReader[B, T]) extends BSONReader[B, Option[T]] {
+    override def read(bson: B): Option[T] = reader.readOpt(bson)
+  }
+  def optionReader[T, B <: BSONValue](implicit reader: BSONReader[B, T]): BSONReader[B, Option[T]] = new OptionReader(reader)
 
 }
 
@@ -36,7 +43,13 @@ object BSONWriteDerivation {
   type Typeclass[T] = BSONWriter[T, _ <: BSONValue]
 
   def combine[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] = {
-    BSONDocumentWriter(t => BSONDocument(caseClass.parameters.map(p => (p.label, p.typeclass.write(p.dereference(t))))))
+    BSONDocumentWriter(t => BSONDocument(caseClass.parameters.flatMap{ p =>
+      val value = p.dereference(t)
+      if (value == None) None
+      else {
+        Some((p.label, p.typeclass.write(value)))
+      }
+    }))
   }
 
   def dispatch[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = {
@@ -48,12 +61,8 @@ object BSONWriteDerivation {
         }
       })
   }
-}
 
-object test {
-  val a0: BSONReader[BSONString, String] = DefaultBSONHandlers.BSONStringHandler
-  val a1: BSONReader[_, String] = a0
-
-//  val b: BSONReadDerivation.Typeclass[Seq[String]] = DefaultBSONHandlers.bsonArrayToCollectionReader[Seq, String]
-
+  //another workaround
+  def optionWriter[T, B <: BSONValue](implicit writer: BSONWriter[T, B]): BSONWriter[Option[T], B] =
+    BSONWriter(t => t.fold[B](BSONNull.asInstanceOf[B])(writer.write))
 }

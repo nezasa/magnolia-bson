@@ -1,7 +1,7 @@
 package magnolia.bson
 
 object examples {
-  case class Coordinates(lat: Double, long: Double, a: Seq[Int] = Seq.empty)
+  case class Coordinates(lat: Double, long: Option[Double], a: Seq[Int] = Seq.empty)
   case class City(name: String, location: Coordinates)
 
   sealed trait Transport

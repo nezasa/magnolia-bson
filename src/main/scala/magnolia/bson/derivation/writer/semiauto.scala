@@ -2,7 +2,7 @@ package magnolia.bson.derivation.writer
 
 import magnolia.bson.BSONWriteDerivation
 import magnolia.{CaseClass, Magnolia, SealedTrait}
-import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONDocumentWriter, BSONValue, BSONWriter}
+import reactivemongo.bson.{BSONDocumentWriter, BSONValue, BSONWriter}
 
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
@@ -10,7 +10,7 @@ import scala.reflect.macros.whitebox
 object semiauto {
 
 //  type B <: BSONValue
-  private type Typeclass[T] = BSONWriteDerivation.Typeclass[T]
+  private type Typeclass[T] = BSONWriter[T, _ <: BSONValue]//BSONWriteDerivation.Typeclass[T]
 //
 //  val d = new BSONWriteDerivation[B] {}
 
@@ -31,4 +31,7 @@ object semiauto {
       c.universe.reify(magnoliaTree.splice.asInstanceOf[BSONDocumentWriter[A]])
     }
   }
+
+  //another workaround
+  implicit def optionWriter[T, B <: BSONValue](implicit writer: BSONWriter[T, B]): BSONWriter[Option[T], B] = BSONWriteDerivation.optionWriter
 }

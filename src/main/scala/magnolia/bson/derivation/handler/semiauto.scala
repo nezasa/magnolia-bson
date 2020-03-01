@@ -1,8 +1,9 @@
 package magnolia.bson.derivation.handler
 
+import magnolia.bson.BSONReadDerivation.OptionReader
 import magnolia.bson.{BSONReadDerivation, BSONWriteDerivation}
 import magnolia.{CaseClass, Magnolia, SealedTrait}
-import reactivemongo.bson.{BSONDocumentHandler, BSONDocumentReader, BSONDocumentWriter, BSONHandler, BSONReader, BSONValue, BSONWriter, VariantBSONWriter, VariantBSONWriterWrapper}
+import reactivemongo.bson.{BSONDocumentHandler, BSONDocumentReader, BSONDocumentWriter, BSONHandler, BSONValue, BSONWriter, VariantBSONWriter, VariantBSONWriterWrapper}
 
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
@@ -39,6 +40,13 @@ object semiauto {
   //workaround while https://github.com/ReactiveMongo/ReactiveMongo/pull/945 is not merged
   implicit def findWriter2[T, B <: BSONValue](implicit writer: VariantBSONWriter[T, B]): BSONWriter[T, B] =
     new VariantBSONWriterWrapper(writer)
+
+  //another workaround
+  class OptionHandler[T, B <: BSONValue](private val handler: BSONHandler[B, T]) extends OptionReader[T, B](handler) with BSONHandler[B, Option[T]] {
+    override def write(t: Option[T]): B = writeDerivation.optionWriter(handler).write(t)
+    override def read(bson: B): Option[T] = readDerivation.optionReader(handler).read(bson)
+  }
+  implicit def optionHandler[T, B <: BSONValue](implicit handler: BSONHandler[B, T]): BSONHandler[B, Option[T]] = new OptionHandler(handler)
 }
 
 //object semiauto extends semiauto

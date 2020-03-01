@@ -10,7 +10,7 @@ import scala.reflect.macros.whitebox
 object semiauto {
 
 //  type B <: BSONValue
-  private type Typeclass[T] = BSONReadDerivation.Typeclass[T]
+  private type Typeclass[T] = BSONReader[_ <: BSONValue, T] //BSONReadDerivation.Typeclass[T]
 
   def combine[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T]  =
     BSONReadDerivation.combine(caseClass)
@@ -29,6 +29,9 @@ object semiauto {
       c.universe.reify(magnoliaTree.splice.asInstanceOf[BSONDocumentReader[A]])
     }
   }
+
+  //another workaround
+  implicit def optionReader[T, B <: BSONValue](implicit reader: BSONReader[B, T]): BSONReader[B, Option[T]] = BSONReadDerivation.optionReader
 }
 
 //object semiauto extends semiauto
