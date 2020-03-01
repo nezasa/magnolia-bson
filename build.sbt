@@ -26,8 +26,6 @@ ThisBuild / licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 
 name := "magnolia-bson"
 
-version := "0.1-SNAPSHOT"
-
 libraryDependencies += "com.propensive" %% "magnolia" % "0.12.6"
 libraryDependencies += "org.reactivemongo" %% "reactivemongo-bson" % "0.20.3"
 libraryDependencies += "org.specs2" %% "specs2-core" % "4.7.0"
