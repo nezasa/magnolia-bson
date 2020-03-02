@@ -15,7 +15,7 @@ object BSONReadDerivation {
       caseClass.construct { p =>
         doc.getAsTry(p.label)(p.typeclass) match {
           case Success(v) => v
-          case Failure(ex) => 
+          case Failure(ex) =>
             if(ex.isInstanceOf[DocumentKeyNotFound] && p.typeclass.isInstanceOf[OptionReader[_, _]]) None else throw ex
         }
       }
@@ -32,7 +32,10 @@ object BSONReadDerivation {
 
   //another workaround
   class OptionReader[T, B <: BSONValue](private val reader: BSONReader[B, T]) extends BSONReader[B, Option[T]] {
-    override def read(bson: B): Option[T] = reader.readOpt(bson)
+    override def read(bson: B): Option[T] = bson.asInstanceOf[BSONValue] match {
+      case BSONNull => None
+      case _ => Some(reader.read(bson))
+    }
   }
   def optionReader[T, B <: BSONValue](implicit reader: BSONReader[B, T]): BSONReader[B, Option[T]] = new OptionReader(reader)
 
